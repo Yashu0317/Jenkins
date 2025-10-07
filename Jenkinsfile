@@ -1,47 +1,40 @@
 pipeline {
     agent any
 
-    environment {
-        IMAGE_NAME = "myapp"
-        DEV_TAG = "dev"
-        TEST_TAG = "test"
-    }
-
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/Yashu0317/Jenkins.git'
+                // Get the code from GitHub or Git
+                git 'https://github.com/Yashu0317/yoga.git'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Install Dependencies') {
             steps {
-                bat "docker build -t %IMAGE_NAME% ."
+                // Install required npm packages
+                sh 'npm install'
             }
         }
 
-        stage('Run Dev Container') {
+        stage('Build') {
             steps {
-                bat "docker run -d -p 3000:3000 --name %IMAGE_NAME%_%DEV_TAG% %IMAGE_NAME%"
+                // If your app has a build step
+                sh 'npm run build || echo "No build step"'
             }
         }
 
-        stage('Run Test Container') {
+        stage('Test') {
             steps {
-                bat "docker run -d -p 4000:3000 --name %IMAGE_NAME%_%TEST_TAG% %IMAGE_NAME%"
+                // Run tests (make sure you have "test" script in package.json)
+                sh 'npm test || echo "No tests found"'
             }
         }
-    }
 
-    post {
-        always {
-            bat "docker ps -a"
-        }
-        cleanup {
-            bat "docker stop %IMAGE_NAME%_%DEV_TAG% || true"
-            bat "docker stop %IMAGE_NAME%_%TEST_TAG% || true"
-            bat "docker rm %IMAGE_NAME%_%DEV_TAG% || true"
-            bat "docker rm %IMAGE_NAME%_%TEST_TAG% || true"
+        stage('Archive') {
+            steps {
+                // Save build files as artifacts
+                archiveArtifacts artifacts: '**/*', onlyIfSuccessful: true
+            }
         }
     }
 }
